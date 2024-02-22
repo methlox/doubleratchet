@@ -6,6 +6,25 @@ import (
 	"testing"
 )
 
+func TestDhPair(t *testing.T) {
+	// Arrange.
+	p := dhPair{
+		privateKey: [32]byte{5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5},
+		publicKey:  [32]byte{6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6},
+	}
+
+	// Act.
+	var (
+		privKey = p.PrivateKey()
+		pubKey  = p.PublicKey()
+	)
+
+	// Assert.
+	require.Equal(t, p.privateKey, privKey)
+	require.Equal(t, p.publicKey, pubKey)
+	require.Equal(t, fmt.Sprintf(`{privateKey: %s publicKey: %s}`, p.PrivateKey(), p.PublicKey()), p.String())
+}
+
 func TestDefaultCrypto_GenerateDH_Basic(t *testing.T) {
 	// Arrange.
 	c := DefaultCrypto{}
