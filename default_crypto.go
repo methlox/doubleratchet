@@ -67,21 +67,20 @@ func (c DefaultCrypto) KdfRK(rk, dhOut []byte) (rootKey, chainKey []byte) {
 	return nil, nil
 }
 
-func (c DefaultCrypto) KdfCK(ck []byte) ([]byte, []byte) {
+func (c DefaultCrypto) KdfCK(ck Key) (chainKey Key, msgKey Key) {
 	const (
 		ckInput = 15
 		mkInput = 16
 	)
 
-	// TODO: Use sha512? Think about how to switch the implementation later if not.
-	hasher := hmac.New(sha256.New, ck)
+	h := hmac.New(sha256.New, ck[:])
 
-	hasher.Write([]byte(ckInput))
-	chainKey := hasher.Sum(nil)
-	hasher.Reset()
+	h.Write([]byte{ckInput})
+	copy(chainKey[:], h.Sum(nil))
+	h.Reset()
 
-	hasher.Write([]byte(mkInput))
-	msgKey := hasher.Sum(nil)
+	h.Write([]byte{mkInput})
+	copy(msgKey[:], h.Sum(nil))
 
 	return chainKey, msgKey
 }
