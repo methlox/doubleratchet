@@ -1,15 +1,8 @@
 # doubleratchet
 
-[The Double Ratchet Algorithm](https://whispersystems.org/docs/specifications/doubleratchet) is used
-by two parties to exchange encrypted messages based on a shared secret key. Typically the parties
-will use some key agreement protocol (such as X3DH) to agree on the shared secret key.
-Following this, the parties will use the Double Ratchet to send and receive encrypted messages.
+[The Double Ratchet Algorithm](https://whispersystems.org/docs/specifications/doubleratchet) is used by the biggest platforms in the field, such as Signal, Facebook Messenger, WhatsApp and Matrix in order to provide E2E encryption for their instant messages. It is used by two parties to exchange encrypted messages based on a shared secret key. Typically the parties will use some key agreement protocol (such as X3DH) to agree on the shared secret key. Following this, the parties will use the Double Ratchet to send and receive encrypted messages.
 
-The parties derive new keys for every Double Ratchet message so that earlier keys cannot be calculated
-from later ones. The parties also send Diffie-Hellman public values attached to their messages.
-The results of Diffie-Hellman calculations are mixed into the derived keys so that later keys cannot
-be calculated from earlier ones. These properties gives some protection to earlier or later encrypted 
-messages in case of a compromise of a party's keys.
+The parties derive new keys for every Double Ratchet message so that earlier keys cannot be calculated from later ones. The parties also send Diffie-Hellman public values attached to their messages. The results of Diffie-Hellman calculations are mixed into the derived keys so that later keys cannot be calculated from earlier ones. These properties gives some protection to earlier or later encrypted messages in case of a compromise of a party's keys.
 
 ## Implementation notes
 
@@ -18,10 +11,10 @@ messages in case of a compromise of a party's keys.
 1. No more than 1000 messages can be skipped in a single chain.
 1. Skipped messages from a single ratchet step are deleted after 100 ratchet steps.
 1. Both parties' sending and receiving chains are initialized with the shared key so that both
-of them could message each other from the very beginning.
+   of them could message each other from the very beginning.
 1. Both plain and encrypted header versions are implemented.
 
-### Cryptographic primitives 
+### Cryptographic primitives
 
 1. **GENERATE_DH():** Curve25519
 1. **KDF_RK(rk, dh_out):** HKDF with SHA-256
@@ -99,17 +92,17 @@ Additional options can be passed to constructors to customize the algorithm beha
 ```go
 doubleratchet.New(
     sk, keyPair,
-    
+
     // Your own cryptography supplement implementing doubleratchet.Crypto.
     WithCrypto(c),
-    
+
     // Custom storage for skipped keys implementing doubleratchet.KeysStorage.
     WithKeysStorage(ks),
-    
+
     // The maximum number of skipped keys. Error will be raised in an attempt to store more keys
     // in a single chain while decrypting.
     WithMaxSkip(1200),
-    
+
     // The number of Diffie-Hellman ratchet steps skipped keys will be stored.
     WithMaxKeep(90),
 )
@@ -123,17 +116,17 @@ can only see ciphertexts and nothing else. However, it adds more complexity to t
 namely:
 
 1. Parties should agree on 2 more secret keys for encrypting headers before the double ratchet
-session.
+   session.
 1. When a recipient receives a message she must first associate the message with its relevant
-Double Ratchet session (assuming she has different sessions with different parties).
-How this is done is outside of the scope of this library, although [the Pond protocol](https://github.com/agl/pond) offers some
-ideas as stated in the Double Ratchet specification.
+   Double Ratchet session (assuming she has different sessions with different parties).
+   How this is done is outside of the scope of this library, although [the Pond protocol](https://github.com/agl/pond) offers some
+   ideas as stated in the Double Ratchet specification.
 1. Header encryption makes messages 48 bytes longer. For example, if you're sending message
-`how are you?` in a version without header encryption, it will be encrypted into
-`iv + len(pt) + signature = 16 + 12 + 32 = 60` bytes plus a header `rk + pn + n = 32 + 4 + 4 = 40` bytes
-with 100 bytes in total. In case of the header encryption modification the header will also
-be encrypted which will add 48 more bytes with the total of 148 bytes. Note that the longer
-your message, the more resulting length it takes.
+   `how are you?` in a version without header encryption, it will be encrypted into
+   `iv + len(pt) + signature = 16 + 12 + 32 = 60` bytes plus a header `rk + pn + n = 32 + 4 + 4 = 40` bytes
+   with 100 bytes in total. In case of the header encryption modification the header will also
+   be encrypted which will add 48 more bytes with the total of 148 bytes. Note that the longer
+   your message, the more resulting length it takes.
 1. It does a bit more computations especially for skipped messages and will work more slowly.
 
 #### Example
