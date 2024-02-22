@@ -1,8 +1,11 @@
 package ratchet
 
 import (
-	"crypto/rand"
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -113,9 +116,52 @@ func (c DefaultCrypto) Encrypt(mk Key, plaintext, ad []byte) []byte {
 	return append(ciphertext, c.computeSignature(authKey[:], ciphertext, ad)...)
 }
 
+func (c DefaultCrypto) Decrypt(mk Key, authCiphertext, ad []byte) ([]byte, error) {
+	var (
+		l          = len(authCiphertext)
+		ciphertext = authCiphertext[:l-sha256.Size]
+		signature  = authCiphertext[l-sha256.Size:]
+	)
 
-func (c CryptoRecommended) Decrypt(mk, ciphertext, associatedData []byte) (plaintext []byte) {
-	// TODO: Implement.
+	// Check the signature.
+	encKey, authKey, _ := c.deriveEncKeys(mk)
 
-	return nil
+	if s := c.computeSignature(authKey[:], ciphertext, ad); !bytes.Equal(s, signature) {
+		return nil, fmt.Errorf("invalid signature")
+	}
+
+	// Decrypt.
+	var (
+		block, _  = aes.NewCipher(encKey[:]) // No error will occur here as encKey is guaranteed to be 32 bytes.
+		stream    = cipher.NewCTR(block, ciphertext[:aes.BlockSize])
+		plaintext = make([]byte, len(ciphertext[aes.BlockSize:]))
+	)
+	stream.XORKeyStream(plaintext, ciphertext[aes.BlockSize:])
+
+	return plaintext, nil
+}
+
+// deriveEncKeys derive keys for message encryption and decryption. Returns (encKey, authKey, iv, err).
+func (c DefaultCrypto) deriveEncKeys(mk Key) (encKey Key, authKey Key, iv [16]byte) {
+	// First, derive encryption and authentication key out of mk.
+	salt := make([]byte, 32)
+	var (
+		r   = hkdf.New(sha256.New, mk[:], salt, []byte("pcwSByyx2CRdryCffXJwy7xgVZWtW5Sh"))
+		buf = make([]byte, 80)
+	)
+
+	// The only error here is an entropy limit which won't be reached for such a short buffer.
+	_, _ = io.ReadFull(r, buf)
+
+	copy(encKey[:], buf[0:32])
+	copy(authKey[:], buf[32:64])
+	copy(iv[:], buf[64:80])
+	return
+}
+
+func (c DefaultCrypto) computeSignature(authKey, ciphertext, associatedData []byte) []byte {
+	h := hmac.New(sha256.New, authKey)
+	h.Write(associatedData)
+	h.Write(ciphertext)
+	return h.Sum(nil)
 }
