@@ -97,3 +97,46 @@ func (s *state) dhRatchet(m MessageHeader) error {
 	s.SendCh, s.NHKs = s.RootCh.step(s.Crypto.DH(s.DHs, s.DHr))
 	return nil
 }
+
+type skippedKey struct {
+	key Key
+	nr  uint
+	mk  Key
+}
+
+// skipMessageKeys skips message keys in the current receiving chain.
+func (s *state) skipMessageKeys(key Key, until uint) ([]skippedKey, error) {
+	if until < uint(s.RecvCh.N) {
+		return nil, fmt.Errorf("bad until: probably an out-of-order message that was deleted")
+	}
+	nSkipped := s.MkSkipped.Count(key)
+	if until-uint(s.RecvCh.N)+nSkipped > s.MaxSkip {
+		return nil, fmt.Errorf("too many messages")
+	}
+	skipped := []skippedKey{}
+	for uint(s.RecvCh.N) < until {
+		mk := s.RecvCh.step()
+		skipped = append(skipped, skippedKey{
+			key: key,
+			nr:  uint(s.RecvCh.N - 1),
+			mk:  mk,
+		})
+	}
+	return skipped, nil
+}
+
+func (s *state) applyChanges(sc state, skipped []skippedKey) {
+	*s = sc
+	for _, skipped := range skipped {
+		s.MkSkipped.Put(skipped.key, skipped.nr, skipped.mk)
+	}
+}
+
+func (s *state) deleteSkippedKeys(key Key) {
+	s.DeleteKeys[s.Step] = key
+	s.Step++
+	if hk, ok := s.DeleteKeys[s.Step-s.MaxKeep]; ok {
+		s.MkSkipped.DeletePk(hk)
+		delete(s.DeleteKeys, s.Step-s.MaxKeep)
+	}
+}
