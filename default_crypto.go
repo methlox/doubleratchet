@@ -95,11 +95,24 @@ func (c DefaultCrypto) KdfCK(ck Key) (chainKey Key, msgKey Key) {
 	return chainKey, msgKey
 }
 
-func (c DefaultCrypto) Encrypt(mk, plaintext, associatedData []byte) (ciphertext []byte) {
-	// TODO: Implement.
+// Encrypt uses a slightly different approach than in the algorithm specification:
+// it uses AES-256-CTR instead of AES-256-CBC for security, ciphertext length and implementation
+// complexity considerations.
+func (c DefaultCrypto) Encrypt(mk Key, plaintext, ad []byte) []byte {
+	encKey, authKey, iv := c.deriveEncKeys(mk)
 
-	return nil
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	copy(ciphertext, iv[:])
+
+	var (
+		block, _ = aes.NewCipher(encKey[:]) // No error will occur here as encKey is guaranteed to be 32 bytes.
+		stream   = cipher.NewCTR(block, iv[:])
+	)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	return append(ciphertext, c.computeSignature(authKey[:], ciphertext, ad)...)
 }
+
 
 func (c CryptoRecommended) Decrypt(mk, ciphertext, associatedData []byte) (plaintext []byte) {
 	// TODO: Implement.
