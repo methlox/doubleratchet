@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/hkdf"
 )
 
 type dhPair struct {
@@ -61,10 +62,19 @@ func (c DefaultCrypto) DH(dhPair DHPair, dhPub Key) Key {
 	return dhOut
 }
 
-func (c DefaultCrypto) KdfRK(rk, dhOut []byte) (rootKey, chainKey []byte) {
-	// TODO: Implement.
+func (c DefaultCrypto) KdfRK(rk, dhOut Key) (rootKey, chainKey, headerKey Key) {
+	var (
+		r   = hkdf.New(sha256.New, dhOut[:], rk[:], []byte("rsZUpEuXUqqwXBvSy3EcievAh4cMj6QL"))
+		buf = make([]byte, 96)
+	)
 
-	return nil, nil
+	// The only error here is an entropy limit which won't be reached for such a short buffer.
+	_, _ = io.ReadFull(r, buf)
+
+	copy(rootKey[:], buf[:32])
+	copy(chainKey[:], buf[32:64])
+	copy(headerKey[:], buf[64:96])
+	return
 }
 
 func (c DefaultCrypto) KdfCK(ck Key) (chainKey Key, msgKey Key) {
