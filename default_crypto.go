@@ -2,6 +2,8 @@ package ratchet
 
 import (
 	"crypto/rand"
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
 
@@ -57,4 +59,41 @@ func (c DefaultCrypto) DH(dhPair DHPair, dhPub Key) Key {
 	)
 	curve25519.ScalarMult(&dhOut, &privKey, &pubKey)
 	return dhOut
+}
+
+func (c DefaultCrypto) KdfRK(rk, dhOut []byte) (rootKey, chainKey []byte) {
+	// TODO: Implement.
+
+	return nil, nil
+}
+
+func (c DefaultCrypto) KdfCK(ck []byte) ([]byte, []byte) {
+	const (
+		ckInput = 15
+		mkInput = 16
+	)
+
+	// TODO: Use sha512? Think about how to switch the implementation later if not.
+	hasher := hmac.New(sha256.New, ck)
+
+	hasher.Write([]byte(ckInput))
+	chainKey := hasher.Sum(nil)
+	hasher.Reset()
+
+	hasher.Write([]byte(mkInput))
+	msgKey := hasher.Sum(nil)
+
+	return chainKey, msgKey
+}
+
+func (c DefaultCrypto) Encrypt(mk, plaintext, associatedData []byte) (ciphertext []byte) {
+	// TODO: Implement.
+
+	return nil
+}
+
+func (c CryptoRecommended) Decrypt(mk, ciphertext, associatedData []byte) (plaintext []byte) {
+	// TODO: Implement.
+
+	return nil
 }
