@@ -1,4 +1,4 @@
-# doubleratchet
+# Double Ratchet
 
 [The Double Ratchet Algorithm](https://whispersystems.org/docs/specifications/doubleratchet) is used by the biggest platforms in the field, such as Signal, Facebook Messenger, WhatsApp and Matrix in order to provide E2E encryption for their instant messages. It is used by two parties to exchange encrypted messages based on a shared secret key. Typically the parties will use some key agreement protocol (such as X3DH) to agree on the shared secret key. Following this, the parties will use the Double Ratchet to send and receive encrypted messages.
 
