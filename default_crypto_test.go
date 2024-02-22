@@ -27,6 +27,30 @@ func TestDefaultCrypto_GenerateDH_Basic(t *testing.T) {
 	require.NotEqual(t, pair.PublicKey(), pair.PrivateKey())
 }
 
+func TestDefaultCrypto_GenerateDH_DifferentKeysEveryTime(t *testing.T) {
+	// Arrange.
+	var (
+		c    = DefaultCrypto{}
+		keys = make(map[[32]byte]bool)
+	)
+
+	for i := 0; i < 10; i++ {
+		t.Run("", func(t *testing.T) {
+			// Act.
+			pair, err := c.GenerateDH()
+
+			// Assert.
+			require.Nil(t, err)
+			require.False(t, keys[pair.PrivateKey()])
+			require.False(t, keys[pair.PublicKey()])
+
+			// Preserve.
+			keys[pair.PrivateKey()] = true
+			keys[pair.PublicKey()] = true
+		})
+	}
+}
+
 func TestDefaultCrypto_DH(t *testing.T) {
 	// Arrange.
 	c := DefaultCrypto{}
