@@ -26,3 +26,22 @@ func TestDefaultCrypto_GenerateDH_Basic(t *testing.T) {
 	require.Len(t, pair.PublicKey(), 32)
 	require.NotEqual(t, pair.PublicKey(), pair.PrivateKey())
 }
+
+func TestDefaultCrypto_DH(t *testing.T) {
+	// Arrange.
+	c := DefaultCrypto{}
+
+	// Act.
+	var (
+		alicePair, err1 = c.GenerateDH()
+		bobPair, err2   = c.GenerateDH()
+		aliceSK         = c.DH(alicePair, bobPair.PublicKey())
+		bobSK           = c.DH(bobPair, alicePair.PublicKey())
+	)
+
+	// Assert.
+	require.Nil(t, err1)
+	require.Nil(t, err2)
+	require.NotEqual(t, [32]byte{}, aliceSK)
+	require.Equal(t, aliceSK, bobSK)
+}
