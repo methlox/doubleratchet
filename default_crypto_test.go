@@ -121,3 +121,22 @@ func TestDefaultCrypto_deriveEncKeys(t *testing.T) {
 	require.NotContains(t, authKey, iv)
 	require.NotEqual(t, encKey, authKey)
 }
+
+func TestDefaultCrypto_computeSignature(t *testing.T) {
+	// Arrange.
+	var (
+		c          = DefaultCrypto{}
+		ciphertext = []byte{13, 250, 114, 78}
+	)
+
+	// Act.
+	signature := c.computeSignature(
+		[]byte{0xeb, 0x8, 0x10, 0x7c, 0x33, 0x54, 0x0, 0x20, 0xe9, 0x4f, 0x6c, 0x84, 0xe4, 0x39, 0x50, 0x5a, 0x2f, 0x60, 0xbe, 0x81, 0xa, 0x78, 0x8b, 0xeb, 0x1e, 0x2c, 0x9, 0x8d, 0x4b, 0x4d, 0xc1, 0x40},
+		ciphertext,
+		nil,
+	)
+
+	// Assert.
+	require.Len(t, signature, 32)
+	require.NotEqual(t, [32]byte{}, signature)
+}
