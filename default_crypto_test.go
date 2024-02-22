@@ -140,3 +140,59 @@ func TestDefaultCrypto_computeSignature(t *testing.T) {
 	require.Len(t, signature, 32)
 	require.NotEqual(t, [32]byte{}, signature)
 }
+
+func TestDefaultCrypto_EncryptDecrypt(t *testing.T) {
+	// Arrange.
+	var (
+		c   = DefaultCrypto{}
+		msg = []byte("1337")
+		mk  = [32]byte{0xeb, 0x8, 0x10, 0x7c, 0x33, 0x54, 0x0, 0x20, 0xe9, 0x4f, 0x6c, 0x84, 0xe4, 0x39, 0x50, 0x5a, 0x2f, 0x60, 0xbe, 0x81, 0xa, 0x78, 0x8b, 0xeb, 0x1e, 0x2c, 0x9, 0x8d, 0x4b, 0x4d, 0xc1, 0x40}
+	)
+
+	t.Run("no associated data", func(t *testing.T) {
+		// Act.
+		var (
+			ciphertext     = c.Encrypt(mk, msg, nil)
+			plaintext, err = c.Decrypt(mk, ciphertext, nil)
+		)
+
+		// Assert.
+		require.Nil(t, err)
+		require.Len(t, ciphertext, 16+len(msg)+32) // iv + plaintext length + signature
+		require.Equal(t, msg, plaintext)
+	})
+
+	t.Run("same associated data", func(t *testing.T) {
+		// Act.
+		var (
+			ciphertext     = c.Encrypt(mk, msg, []byte("any secret"))
+			plaintext, err = c.Decrypt(mk, ciphertext, []byte("any secret"))
+		)
+
+		// Assert.
+		require.Nil(t, err)
+		require.Len(t, ciphertext, 32+16+len(msg)) // signature + iv + plaintext length
+		require.Equal(t, msg, plaintext)
+	})
+
+	t.Run("different associated data", func(t *testing.T) {
+		// Act.
+		var (
+			ciphertext = c.Encrypt(mk, msg, []byte("not secret at all"))
+			_, err     = c.Decrypt(mk, ciphertext, []byte("any secret"))
+		)
+
+		// Assert.
+		require.EqualError(t, err, "invalid signature")
+	})
+
+	t.Run("malformed signature", func(t *testing.T) {
+		// Act.
+		ciphertext := c.Encrypt(mk, msg, nil)
+		ciphertext[len(ciphertext)-1] ^= 57 // Inverse the last byte in the signature.
+		_, err := c.Decrypt(mk, ciphertext, nil)
+
+		// Assert.
+		require.EqualError(t, err, "invalid signature")
+	})
+}
