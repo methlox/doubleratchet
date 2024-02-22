@@ -47,7 +47,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tiabc/doubleratchet"
+	"github.com/methlox/doubleratchet"
 )
 
 func main() {
